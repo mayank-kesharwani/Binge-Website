@@ -1,4 +1,5 @@
-import { translate } from "@vitalets/google-translate-api";
+const MYMEMORY_API_URL =
+  "https://api.mymemory.translated.net/get";
 
 export const translateText = async (
   text,
@@ -6,20 +7,83 @@ export const translateText = async (
   targetLanguage = "en",
 ) => {
   try {
-    const result = await translate(text, {
-      from: sourceLanguage,
-      to: targetLanguage,
+    if (!text?.trim()) {
+      throw new Error("Text is required for translation");
+    }
+
+    if (!targetLanguage) {
+      throw new Error("Target language is required");
+    }
+
+    // MyMemory needs a specific source language.
+    // Our comment controller already detects English/Hindi.
+    const source =
+      sourceLanguage === "auto"
+        ? "en"
+        : sourceLanguage.toLowerCase();
+
+    const target = targetLanguage.toLowerCase();
+
+    if (source === target) {
+      return text;
+    }
+
+    const params = new URLSearchParams({
+      q: text,
+      langpair: `${source}|${target}`,
+      mt: "1",
     });
 
-    return result.text;
-  } catch (error) {
-    console.error("❌ Translation failed");
-    console.error("Message:", error.message);
-    console.error("Name:", error.name);
-    console.error("Code:", error.code);
-    console.error("Status:", error.status);
-    console.error("Full error:", error);
+    if (process.env.MYMEMORY_EMAIL) {
+      params.set(
+        "de",
+        process.env.MYMEMORY_EMAIL,
+      );
+    }
 
-    throw new Error("Translation service failed");
+    const response = await fetch(
+      `${MYMEMORY_API_URL}?${params.toString()}`,
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error(
+        "MyMemory HTTP error:",
+        response.status,
+        data,
+      );
+
+      throw new Error(
+        data?.responseDetails ||
+          "MyMemory translation request failed",
+      );
+    }
+
+    if (
+      data?.responseStatus !== 200 ||
+      !data?.responseData?.translatedText
+    ) {
+      console.error(
+        "MyMemory translation error:",
+        data,
+      );
+
+      throw new Error(
+        data?.responseDetails ||
+          "Translation failed",
+      );
+    }
+
+    return data.responseData.translatedText;
+  } catch (error) {
+    console.error(
+      "❌ MyMemory translation error:",
+      error.message,
+    );
+
+    throw new Error(
+      "Translation service failed",
+    );
   }
 };
