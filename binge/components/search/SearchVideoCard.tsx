@@ -149,7 +149,7 @@ export default function SearchVideoCard({
 
           {/* Menu */}
           <div className="self-start">
-            <VideoMenu />
+            <VideoMenu video={video} />
           </div>
         </div>
       </Link>
