@@ -1,0 +1,32 @@
+{
+  "settings": {
+    "badge": "Settings",
+    "title": "Manage your account",
+    "description": "Customize your Binge experience.",
+
+    "account": "Account",
+    "privacy": "Privacy",
+    "about": "About",
+
+    "profile": "Profile",
+    "profileDescription": "Manage your personal information.",
+
+    "accountSettings": "Account",
+    "accountDescription": "Password, email and account security.",
+
+    "premiumTitle": "Get Binge Premium",
+    "premiumDescription": "Unlock premium videos, longer watch time, downloads, and an ad-free experience.",
+
+    "preferences": "Preferences",
+    "preferencesDescription": "Theme, playback and language preferences.",
+
+    "notifications": "Notifications",
+    "notificationsDescription": "Manage notification preferences.",
+
+    "privacySettings": "Privacy",
+    "privacyDescription": "History and privacy controls.",
+
+    "aboutSettings": "About",
+    "aboutDescription": "Version, developer and application information."
+  }
+}
