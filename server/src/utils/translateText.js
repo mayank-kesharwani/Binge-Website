@@ -1,115 +1,8 @@
-const MYMEMORY_API_URL =
-  "https://api.mymemory.translated.net/get";
+const DEEPL_API_URL = "https://api-free.deepl.com/v2/translate";
 
-const MAX_BYTES = 450;
-
-// Keep chunks comfortably below MyMemory's 500-byte limit.
-const getByteLength = (text) =>
-  Buffer.byteLength(text, "utf8");
-
-const splitIntoChunks = (text, maxBytes = MAX_BYTES) => {
-  const words = text.split(/\s+/);
-  const chunks = [];
-  let currentChunk = "";
-
-  for (const word of words) {
-    const candidate = currentChunk
-      ? `${currentChunk} ${word}`
-      : word;
-
-    if (getByteLength(candidate) <= maxBytes) {
-      currentChunk = candidate;
-      continue;
-    }
-
-    if (currentChunk) {
-      chunks.push(currentChunk);
-    }
-
-    // Handle a single word that itself exceeds maxBytes.
-    if (getByteLength(word) > maxBytes) {
-      let part = "";
-
-      for (const char of word) {
-        const candidatePart = part + char;
-
-        if (getByteLength(candidatePart) <= maxBytes) {
-          part = candidatePart;
-        } else {
-          if (part) {
-            chunks.push(part);
-          }
-
-          part = char;
-        }
-      }
-
-      currentChunk = part;
-    } else {
-      currentChunk = word;
-    }
-  }
-
-  if (currentChunk) {
-    chunks.push(currentChunk);
-  }
-
-  return chunks;
-};
-
-const translateChunk = async (
-  text,
-  sourceLanguage,
-  targetLanguage,
-) => {
-  const params = new URLSearchParams({
-    q: text,
-    langpair: `${sourceLanguage}|${targetLanguage}`,
-    mt: "1",
-  });
-
-  if (process.env.MYMEMORY_EMAIL) {
-    params.set(
-      "de",
-      process.env.MYMEMORY_EMAIL,
-    );
-  }
-
-  const response = await fetch(
-    `${MYMEMORY_API_URL}?${params.toString()}`,
-  );
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    console.error(
-      "MyMemory HTTP error:",
-      response.status,
-      data,
-    );
-
-    throw new Error(
-      data?.responseDetails ||
-        "MyMemory translation request failed",
-    );
-  }
-
-  if (
-    data?.responseStatus !== 200 ||
-    !data?.responseData?.translatedText
-  ) {
-    console.error(
-      "MyMemory translation error:",
-      data,
-    );
-
-    throw new Error(
-      data?.responseDetails ||
-        "Translation failed",
-    );
-  }
-
-  return data.responseData.translatedText;
+const LANGUAGE_CODES = {
+  en: "EN",
+  hi: "HI",
 };
 
 export const translateText = async (
@@ -118,51 +11,80 @@ export const translateText = async (
   targetLanguage = "en",
 ) => {
   try {
-    if (!text?.trim()) {
+    const apiKey = process.env.DEEPL_API_KEY;
+
+    if (!apiKey) {
+      throw new Error("DEEPL_API_KEY is not configured");
+    }
+
+    if (!text || !text.trim()) {
+      throw new Error("Text to translate is required");
+    }
+
+    const targetLang = LANGUAGE_CODES[targetLanguage];
+
+    if (!targetLang) {
       throw new Error(
-        "Text is required for translation",
+        `Unsupported target language: ${targetLanguage}`,
       );
     }
 
-    if (!targetLanguage) {
-      throw new Error(
-        "Target language is required",
-      );
-    }
+    const body = {
+      text: [text],
+      target_lang: targetLang,
+    };
 
-    const source =
-      sourceLanguage === "auto"
-        ? "en"
-        : sourceLanguage.toLowerCase();
+    if (
+      sourceLanguage &&
+      sourceLanguage !== "auto"
+    ) {
+      const sourceLang = LANGUAGE_CODES[sourceLanguage];
 
-    const target =
-      targetLanguage.toLowerCase();
-
-    if (source === target) {
-      return text;
-    }
-
-    const chunks = splitIntoChunks(text);
-
-    const translatedChunks = [];
-
-    for (const chunk of chunks) {
-      const translatedChunk =
-        await translateChunk(
-          chunk,
-          source,
-          target,
+      if (!sourceLang) {
+        throw new Error(
+          `Unsupported source language: ${sourceLanguage}`,
         );
+      }
 
-      translatedChunks.push(
-        translatedChunk,
+      body.source_lang = sourceLang;
+    }
+
+    const response = await fetch(DEEPL_API_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `DeepL-Auth-Key ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error(
+        "DeepL translation error:",
+        data,
+      );
+
+      throw new Error(
+        data?.message ||
+          "DeepL translation request failed",
       );
     }
 
-    return translatedChunks.join(" ");
+    const translatedText =
+      data?.translations?.[0]?.text;
+
+    if (!translatedText) {
+      throw new Error(
+        "No translated text returned by DeepL",
+      );
+    }
+
+    return translatedText;
   } catch (error) {
     console.error(
-      "❌ MyMemory translation error:",
+      "Translation error:",
       error.message,
     );
 
