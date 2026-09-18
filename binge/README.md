@@ -1,36 +1,209 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Binge 🎬
 
-## Getting Started
+Binge is a full-stack video streaming platform inspired by modern video-sharing applications. It is built with **Next.js, TypeScript, Tailwind CSS, Node.js, Express, MongoDB, and Socket.IO**.
 
-First, run the development server:
+The platform provides video discovery, creator channels, authentication, social interactions, memberships, subscriptions, downloads, notifications, and real-time Watch Party functionality.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## ✨ Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 🎥 Video Platform
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Browse and discover videos
+- Search videos
+- Category-based video filtering
+- Video playback with custom controls
+- Video upload and management
+- Public/private video visibility
+- Video thumbnails with Cloudinary media storage
+- View tracking
+- Watch history
+- Watch Later
+- Favorites / liked videos
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 👤 Authentication & Accounts
 
-## Learn More
+- User registration and login
+- Email OTP verification
+- OTP resend and expiration handling
+- Protected and public routes
+- User profile management
+- Avatar upload
+- Account settings
+- Privacy and preference settings
+- Session authentication using JWT
 
-To learn more about Next.js, take a look at the following resources:
+### 💬 Social Features
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Like and unlike videos
+- Comments and replies
+- Comment reactions
+- Comment translation
+- Comment reporting
+- Channel subscriptions
+- Subscriber notifications
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 📺 Creator & Channel Features
 
-## Deploy on Vercel
+- Create a channel
+- Edit channel information
+- Channel banner and avatar
+- Creator dashboard
+- Video management
+- Video editing
+- Channel statistics
+- Custom creator profile
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 💎 Membership
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Binge includes a membership system with multiple plans:
+
+- Free
+- Bronze
+- Silver
+- Gold
+
+Membership features include:
+
+- Premium video access
+- Extended watch limits
+- Download limits
+- Ad-free experience for eligible plans
+- Razorpay payment integration
+- Membership expiry management
+
+### 🤝 Watch Party
+
+Real-time Watch Party functionality powered by **Socket.IO** and **WebRTC**.
+
+Users can:
+
+- Create a Watch Party
+- Join using a party code
+- Watch videos together
+- Communicate through real-time chat
+- Use video calling functionality
+
+### 🔔 Notifications
+
+Supports notifications for:
+
+- New videos
+- New subscribers
+- Likes
+- Comments
+- Replies
+- Account updates
+- System updates
+
+### 🌐 Internationalization
+
+Binge supports:
+
+- English
+- Hindi
+
+The interface uses **next-intl** for localization.
+
+### 🎨 UI & Theme
+
+- Responsive design
+- Light and dark themes
+- Tailwind CSS
+- shadcn/ui components
+- Lucide icons
+- Reusable React components
+- Mobile-friendly layouts
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+
+- **Next.js**
+- **React**
+- **TypeScript**
+- **Tailwind CSS**
+- **shadcn/ui**
+- **next-intl**
+- **Zustand**
+- **Axios**
+- **Lucide React**
+- **Socket.IO Client**
+
+### Backend
+
+- **Node.js**
+- **Express.js**
+- **MongoDB**
+- **Mongoose**
+- **JWT**
+- **Socket.IO**
+- **WebRTC**
+- **Brevo**
+- **Cloudinary**
+- **Razorpay**
+
+---
+
+## 📁 Project Structure
+
+```text
+BINGE/
+│
+├── binge/                         # Next.js frontend
+│   ├── app/                       # App Router pages
+│   │   ├── (auth)/                # Authentication pages
+│   │   └── (main)/                # Main application pages
+│   │
+│   ├── components/                # Reusable UI components
+│   │   ├── auth/
+│   │   ├── channel/
+│   │   ├── creator/
+│   │   ├── favorites/
+│   │   ├── history/
+│   │   ├── layout/
+│   │   ├── notification/
+│   │   ├── settings/
+│   │   ├── subscriptions/
+│   │   ├── upload/
+│   │   ├── video/
+│   │   ├── watch/
+│   │   └── watch-party/
+│   │
+│   ├── context/                   # React contexts
+│   ├── constants/                 # Frontend constants
+│   ├── lib/                       # Utility functions
+│   ├── messages/                  # Localization files
+│   ├── services/                  # API service layer
+│   ├── store/                     # Zustand stores
+│   └── types/                     # TypeScript types
+│
+└── server/                        # Express backend
+    └── src/
+        ├── config/                # Service configurations
+        ├── constants/             # Backend constants
+        ├── controllers/           # Request controllers
+        ├── middleware/            # Express middleware
+        ├── models/                # Mongoose models
+        ├── routes/                # API routes
+        ├── socket/                # Socket.IO functionality
+        └── utils/                 # Utility functions
+
+📌 Project Status
+
+Binge is an actively developed full-stack project with its core video streaming, authentication, social interaction, creator, membership, notification, and real-time Watch Party features implemented.
+
+⸻
+
+📄 License
+
+This project is licensed under the ISC License.
+
+⸻
+
+👨‍💻 Author
+
+Mayank Kesharwani
+
+Built with ❤️ while exploring full-stack development, real-time applications, and modern web technologies.
