@@ -541,7 +541,7 @@ export default function AboutPage() {
             {/* Personal Website */}
 
             <a
-              href="https://yourwebsite.com"
+              href="https://mayank-kesharwani-portfolio.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
               className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-red-400/50 hover:bg-muted"
@@ -587,7 +587,7 @@ export default function AboutPage() {
             {/* LinkedIn */}
 
             <a
-              href="https://www.linkedin.com/in/your-profile"
+              href="https://www.linkedin.com/in/mayank-kesharwani-b8b9931b7"
               target="_blank"
               rel="noopener noreferrer"
               className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-red-400/50 hover:bg-muted"
@@ -612,7 +612,7 @@ export default function AboutPage() {
             {/* YouTube */}
 
             <a
-              href="https://www.youtube.com/@your-channel"
+              href="https://www.youtube.com/@mayankcreator"
               target="_blank"
               rel="noopener noreferrer"
               className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-red-400/50 hover:bg-muted"
@@ -635,7 +635,7 @@ export default function AboutPage() {
             {/* Instagram */}
 
             <a
-              href="https://www.instagram.com/your-username"
+              href="https://www.instagram.com/_creator_0_"
               target="_blank"
               rel="noopener noreferrer"
               className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-red-400/50 hover:bg-muted"
@@ -660,7 +660,7 @@ export default function AboutPage() {
             {/* Email */}
 
             <a
-              href="mailto:your@email.com"
+              href="mailto:harshkesharwaniatarra@email.com"
               className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-red-400/50 hover:bg-muted"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-500 transition group-hover:bg-red-500 group-hover:text-white">
