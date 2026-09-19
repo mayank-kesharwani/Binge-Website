@@ -24,6 +24,8 @@ import {
   translateComment,
 } from "@/services/comment.service";
 
+import { useAuthStore } from "@/store/authStore";
+
 // =====================================================
 // Types
 // =====================================================
@@ -48,6 +50,9 @@ type CommentActionsProps = {
 
   language?: string;
   targetLanguage?: "en" | "hi";
+
+  isOwner: boolean;
+
   onCommentChange?: () => void;
 };
 
@@ -101,9 +106,12 @@ export default function CommentActions({
   initialUserReaction = null,
   language = "en",
   targetLanguage,
+  isOwner,
   onCommentChange,
 }: CommentActionsProps) {
   const router = useRouter();
+
+  const { user, hasHydrated } = useAuthStore();
 
   // ===================================================
   // Edit
@@ -121,39 +129,64 @@ export default function CommentActions({
 
   const [likes, setLikes] = useState(initialLikes);
 
-  const [dislikes, setDislikes] = useState(initialDislikes);
+  const [dislikes, setDislikes] =
+    useState(initialDislikes);
 
-  const [userReaction, setUserReaction] = useState<
-    "like" | "dislike" | null
-  >(initialUserReaction);
+  const [userReaction, setUserReaction] =
+    useState<"like" | "dislike" | null>(
+      initialUserReaction,
+    );
 
   // ===================================================
   // Translation
   // ===================================================
 
-  const [translatedText, setTranslatedText] = useState<string | null>(
-    null,
-  );
+  const [translatedText, setTranslatedText] =
+    useState<string | null>(null);
 
-  const [translatedLanguage, setTranslatedLanguage] = useState<
-    "en" | "hi" | null
-  >(null);
+  const [translatedLanguage, setTranslatedLanguage] =
+    useState<"en" | "hi" | null>(null);
 
-  const [translating, setTranslating] = useState(false);
+  const [translating, setTranslating] =
+    useState(false);
 
   // ===================================================
   // Report
   // ===================================================
 
-  const [showReport, setShowReport] = useState(false);
+  const [showReport, setShowReport] =
+    useState(false);
 
-  const [reporting, setReporting] = useState(false);
+  const [reporting, setReporting] =
+    useState(false);
+
+  // ===================================================
+  // Authentication
+  // ===================================================
+
+  const requireLogin = () => {
+    if (!hasHydrated) {
+      return false;
+    }
+
+    if (!user) {
+      toast.error("Please login first");
+      return false;
+    }
+
+    return true;
+  };
 
   // ===================================================
   // Update Comment
   // ===================================================
 
   const handleUpdate = async () => {
+    if (!user || !isOwner) {
+      toast.error("Please login first");
+      return;
+    }
+
     const cleanText = text.trim();
 
     if (!cleanText) {
@@ -162,7 +195,9 @@ export default function CommentActions({
     }
 
     if (cleanText.length > 1000) {
-      toast.error("Comment cannot exceed 1000 characters");
+      toast.error(
+        "Comment cannot exceed 1000 characters",
+      );
       return;
     }
 
@@ -192,6 +227,11 @@ export default function CommentActions({
   // ===================================================
 
   const handleDelete = async () => {
+    if (!user || !isOwner) {
+      toast.error("Please login first");
+      return;
+    }
+
     if (!confirm("Delete this comment?")) {
       return;
     }
@@ -222,6 +262,8 @@ export default function CommentActions({
   const handleReaction = async (
     type: "like" | "dislike",
   ) => {
+    if (!requireLogin()) return;
+
     try {
       const response = await reactToComment(
         commentId,
@@ -234,11 +276,15 @@ export default function CommentActions({
 
       setDislikes(data.dislikes ?? 0);
 
-      setUserReaction(data.reaction ?? null);
+      setUserReaction(
+        data.reaction ?? null,
+      );
     } catch (error) {
       console.error(error);
 
-      toast.error("Failed to update reaction");
+      toast.error(
+        "Failed to update reaction",
+      );
     }
   };
 
@@ -247,6 +293,8 @@ export default function CommentActions({
   // ===================================================
 
   const handleTranslate = async () => {
+    if (!requireLogin()) return;
+
     try {
       setTranslating(true);
 
@@ -262,18 +310,16 @@ export default function CommentActions({
           : "en";
 
       /*
-       * If a target language was supplied but it is the
-       * same as the comment language, automatically use
-       * the other supported language.
-       *
-       * This also protects us from older parents that
-       * still pass targetLanguage="en" for every comment.
+       * If a target language was supplied but it is
+       * the same as the detected language, use the
+       * other supported language.
        */
       let translationTarget: "en" | "hi";
 
       if (
         targetLanguage &&
-        targetLanguage !== detectedSourceLanguage
+        targetLanguage !==
+          detectedSourceLanguage
       ) {
         translationTarget = targetLanguage;
       } else {
@@ -283,13 +329,15 @@ export default function CommentActions({
             : "hi";
       }
 
-      const response = await translateComment(
-        commentId,
-        translationTarget,
-      );
+      const response =
+        await translateComment(
+          commentId,
+          translationTarget,
+        );
 
       const data =
-        response.data?.data || response.data;
+        response.data?.data ||
+        response.data;
 
       setTranslatedText(
         data.translatedText,
@@ -314,6 +362,8 @@ export default function CommentActions({
   const handleReport = async (
     reason: ReportReason,
   ) => {
+    if (!requireLogin()) return;
+
     try {
       setReporting(true);
 
@@ -387,6 +437,7 @@ export default function CommentActions({
             className="flex items-center gap-2 rounded-full bg-muted px-4 py-2 text-sm font-medium text-foreground transition hover:bg-accent disabled:opacity-50"
           >
             <X size={16} />
+
             Cancel
           </button>
         </div>
@@ -476,9 +527,11 @@ export default function CommentActions({
 
         <button
           type="button"
-          onClick={() =>
-            setShowReport(!showReport)
-          }
+          onClick={() => {
+            if (!requireLogin()) return;
+
+            setShowReport(!showReport);
+          }}
           className={`flex items-center gap-1 text-sm transition ${
             showReport
               ? "text-red-600"
@@ -486,32 +539,41 @@ export default function CommentActions({
           }`}
         >
           <Flag size={16} />
+
           Report
         </button>
 
         {/* Edit */}
 
-        <button
-          type="button"
-          onClick={() =>
-            setEditing(true)
-          }
-          className="flex items-center gap-1 text-sm text-muted-foreground transition hover:text-red-600"
-        >
-          <Pencil size={16} />
-          Edit
-        </button>
+        {isOwner && (
+          <button
+            type="button"
+            onClick={() => {
+              if (!requireLogin()) return;
+
+              setEditing(true);
+            }}
+            className="flex items-center gap-1 text-sm text-muted-foreground transition hover:text-red-600"
+          >
+            <Pencil size={16} />
+
+            Edit
+          </button>
+        )}
 
         {/* Delete */}
 
-        <button
-          type="button"
-          onClick={handleDelete}
-          className="flex items-center gap-1 text-sm text-muted-foreground transition hover:text-red-600"
-        >
-          <Trash2 size={16} />
-          Delete
-        </button>
+        {isOwner && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="flex items-center gap-1 text-sm text-muted-foreground transition hover:text-red-600"
+          >
+            <Trash2 size={16} />
+
+            Delete
+          </button>
+        )}
       </div>
 
       {/* ============================================= */}

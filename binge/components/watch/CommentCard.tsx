@@ -5,6 +5,7 @@ import Image from "next/image";
 import formatTimeAgo from "@/lib/formatTimeAgo";
 import { Comment } from "@/types/comment";
 import CommentActions from "./CommentActions";
+import { useAuthStore } from "@/store/authStore";
 
 type CommentCardProps = {
   comment: Comment;
@@ -15,11 +16,19 @@ export default function CommentCard({
   comment,
   onCommentChange,
 }: CommentCardProps) {
+  const { user, hasHydrated } = useAuthStore();
+
   if (!comment.user) return null;
+
+  const isOwner =
+    hasHydrated &&
+    Boolean(user) &&
+    user?._id === comment.user._id;
 
   return (
     <article className="flex gap-4 py-5">
       {/* Avatar */}
+
       <Image
         src={
           comment.user.avatar ||
@@ -32,8 +41,10 @@ export default function CommentCard({
       />
 
       {/* Content */}
+
       <div className="min-w-0 flex-1">
         {/* User + time */}
+
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <h4 className="font-semibold text-foreground">
             {comment.user.username
@@ -53,11 +64,13 @@ export default function CommentCard({
         </div>
 
         {/* Comment */}
+
         <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-foreground">
           {comment.text}
         </p>
 
         {/* Actions */}
+
         <CommentActions
           commentId={comment._id}
           initialText={comment.text}
@@ -67,6 +80,7 @@ export default function CommentCard({
             comment.userReaction ?? null
           }
           language={comment.language || "en"}
+          isOwner={isOwner}
           onCommentChange={onCommentChange}
         />
       </div>

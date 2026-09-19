@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle } from "lucide-react";
 import { useState } from "react";
+
 import SubscribeButton from "@/components/channel/SubscribeButton";
 import { Video } from "@/types/video";
 
@@ -11,17 +12,23 @@ type ChannelInfoProps = {
   video: Pick<Video, "channel">;
 };
 
-export default function ChannelInfo({ video }: ChannelInfoProps) {
+export default function ChannelInfo({
+  video,
+}: ChannelInfoProps) {
   const { channel } = video;
 
-  const [subscribers, setSubscribers] = useState(channel.subscribers);
+  const [subscribers, setSubscribers] =
+    useState(channel.subscribers ?? 0);
 
   return (
     <section className="mt-6 border-b border-border pb-6">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         {/* Left */}
+
         <div className="flex items-start gap-4">
-          <Link href={`/channel/${channel.handle}`}>
+          <Link
+            href={`/channel/${channel.handle}`}
+          >
             <Image
               src={channel.avatar}
               alt={channel.channelName}
@@ -49,7 +56,10 @@ export default function ChannelInfo({ video }: ChannelInfoProps) {
             </Link>
 
             <p className="mt-1 text-sm text-muted-foreground">
-              {subscribers.toLocaleString()} subscribers
+              {subscribers.toLocaleString()}{" "}
+              {subscribers === 1
+                ? "subscriber"
+                : "subscribers"}
             </p>
 
             <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
@@ -59,9 +69,12 @@ export default function ChannelInfo({ video }: ChannelInfoProps) {
         </div>
 
         {/* Right */}
+
         <SubscribeButton
           channelId={channel._id}
-          setSubscribedCount={setSubscribers}
+          setSubscribedCount={
+            setSubscribers
+          }
         />
       </div>
     </section>

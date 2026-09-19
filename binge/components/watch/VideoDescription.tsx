@@ -22,10 +22,8 @@ export default function VideoDescription({
 
   return (
     <section className="mt-6 rounded-2xl bg-muted p-5">
-
       {/* Meta */}
-      <div className="mb-3 flex flex-wrap items-center gap-2 text-sm font-medium text-muted-background">
-
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-sm font-medium text-muted-foreground">
         <span>
           {formatViews(video.views)} views
         </span>
@@ -35,15 +33,12 @@ export default function VideoDescription({
         <span>
           {formatTimeAgo(video.createdAt)}
         </span>
-
       </div>
 
       {/* Description */}
       <p
         className={`whitespace-pre-wrap text-foreground ${
-          expanded
-            ? ""
-            : "line-clamp-3"
+          expanded ? "" : "line-clamp-3"
         }`}
       >
         {video.description}
@@ -52,18 +47,17 @@ export default function VideoDescription({
       {/* Button */}
       {video.description.length > 180 && (
         <button
+          type="button"
           onClick={() =>
             setExpanded(!expanded)
           }
-          className="mt-3 text-sm font-semibold
-          text-foreground hover:text-red-500 hover:underline"
+          className="mt-3 text-sm font-semibold text-foreground hover:text-red-500 hover:underline"
         >
           {expanded
             ? "Show less"
             : "Show more"}
         </button>
       )}
-
     </section>
   );
 }

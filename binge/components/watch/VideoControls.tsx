@@ -61,7 +61,6 @@ export default function VideoControls({
         showControls ? "opacity-100" : "opacity-0"
       }`}
     >
-      {/* Background Gradient */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
 
       <div className="pointer-events-auto relative p-4">
@@ -71,19 +70,20 @@ export default function VideoControls({
           onClick={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
 
-            const percentage = (e.clientX - rect.left) / rect.width;
+            const percentage = Math.min(
+              1,
+              Math.max(0, (e.clientX - rect.left) / rect.width),
+            );
 
             onSeek(percentage);
           }}
         >
           <div className="relative h-1 rounded-full bg-white/30 transition-all group-hover:h-1.5">
-            {/* Played */}
             <div
               style={{ width: `${progress}%` }}
               className="h-full rounded-full bg-red-500"
             />
 
-            {/* Thumb */}
             <div
               style={{
                 left: `calc(${progress}% - 7px)`,
@@ -98,6 +98,7 @@ export default function VideoControls({
           {/* Left */}
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={onSkipBackward}
               className="rounded-full p-2 text-white transition hover:bg-white/20"
             >
@@ -105,6 +106,7 @@ export default function VideoControls({
             </button>
 
             <button
+              type="button"
               onClick={onPlayPause}
               className="rounded-full p-2 text-white transition hover:bg-white/20"
             >
@@ -116,6 +118,7 @@ export default function VideoControls({
             </button>
 
             <button
+              type="button"
               onClick={onSkipForward}
               className="rounded-full p-2 text-white transition hover:bg-white/20"
             >
@@ -123,6 +126,7 @@ export default function VideoControls({
             </button>
 
             <button
+              type="button"
               onClick={onMute}
               className="rounded-full p-2 text-white transition hover:bg-white/20"
             >
@@ -142,6 +146,7 @@ export default function VideoControls({
           <div className="flex items-center gap-2">
             {onNext && (
               <button
+                type="button"
                 onClick={onNext}
                 className="rounded-full p-2 text-white transition hover:bg-white/20"
                 title="Next video"
@@ -149,7 +154,9 @@ export default function VideoControls({
                 <SkipForward className="h-5 w-5" />
               </button>
             )}
+
             <button
+              type="button"
               onClick={onFullscreen}
               className="rounded-full p-2 text-white transition hover:bg-white/20"
             >

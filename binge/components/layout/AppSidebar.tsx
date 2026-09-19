@@ -9,7 +9,6 @@ import { useSidebar } from "@/context/SidebarContext";
 
 import {
   Home,
-  Compass,
   PlaySquare,
   History,
   Heart,
@@ -36,11 +35,6 @@ const Sidebar = () => {
       icon: Home,
       href: "/",
     },
-    // {
-    //   name: "Explore",
-    //   icon: Compass,
-    //   href: "/explore",
-    // },
     {
       name: "Subscriptions",
       icon: PlaySquare,
@@ -88,31 +82,49 @@ const Sidebar = () => {
   return (
     <>
       {/* Mobile Overlay */}
-      {isMobileOpen && (
-        <div
-          onClick={closeMobileSidebar}
-          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm md:hidden"
-        />
-      )}
+      <div
+        onClick={closeMobileSidebar}
+        className={`
+          fixed inset-0 z-30
+          bg-black/50
+          backdrop-blur-sm
+          md:hidden
+          transition-opacity
+          duration-300
+          ease-in-out
+          ${
+            isMobileOpen
+              ? "pointer-events-auto opacity-100"
+              : "pointer-events-none opacity-0"
+          }
+        `}
+      />
 
       {/* Sidebar */}
       <aside
         className={`
           fixed
-          md:sticky
-          top-16
           left-0
+          top-16
           z-40
+
           h-[calc(100vh-4rem)]
+          w-64
+
           overflow-y-auto
           overflow-x-hidden
+
           border-r
           border-border
           bg-background
-          transition-all
-          transition-colors
+
+          md:sticky
+
+          transform
+          transition-transform
+          transition-[width]
           duration-300
-          ease-in-out
+          ease-[cubic-bezier(0.4,0,0.2,1)]
 
           ${
             isMobileOpen
@@ -120,9 +132,12 @@ const Sidebar = () => {
               : "-translate-x-full md:translate-x-0"
           }
 
-          ${isOpen ? "md:w-64" : "md:w-20"}
-
-          w-64
+          md:transition-[width]
+          ${
+            isOpen
+              ? "md:w-64"
+              : "md:w-20"
+          }
         `}
       >
         <nav className="space-y-1 p-2">
@@ -147,7 +162,6 @@ const Sidebar = () => {
                     h-12
                     w-full
                     rounded-xl
-                    transition-all
                     transition-colors
                     duration-200
 
@@ -170,15 +184,15 @@ const Sidebar = () => {
 
                   <span
                     className={`
-                      whitespace-nowrap
                       overflow-hidden
+                      whitespace-nowrap
                       transition-all
-                      transition-colors
                       duration-300
+                      ease-in-out
 
                       ${
                         isOpen
-                          ? "ml-3 opacity-100"
+                          ? "ml-3 w-auto opacity-100"
                           : "ml-0 w-0 opacity-0"
                       }
                     `}
@@ -205,8 +219,8 @@ const Sidebar = () => {
                   tracking-wider
                   text-muted-foreground
                   transition-all
-                  transition-colors
                   duration-300
+                  ease-in-out
 
                   ${
                     isOpen
@@ -240,7 +254,6 @@ const Sidebar = () => {
                         w-full
                         rounded-xl
                         text-foreground
-                        transition-all
                         transition-colors
                         duration-200
 
@@ -263,15 +276,15 @@ const Sidebar = () => {
 
                       <span
                         className={`
-                          whitespace-nowrap
                           overflow-hidden
+                          whitespace-nowrap
                           transition-all
-                          transition-colors
                           duration-300
+                          ease-in-out
 
                           ${
                             isOpen
-                              ? "ml-3 opacity-100"
+                              ? "ml-3 w-auto opacity-100"
                               : "ml-0 w-0 opacity-0"
                           }
                         `}

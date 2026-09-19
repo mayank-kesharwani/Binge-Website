@@ -8,9 +8,11 @@ import {
   Download,
   Play,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import api from "@/lib/axios";
+import { useAuthStore } from "@/store/authStore";
 
 type DownloadItem = {
   id: string;
@@ -35,13 +37,27 @@ const formatDownloadDate = (date: string) => {
 };
 
 export default function DownloadsPage() {
+  const { user, hasHydrated } = useAuthStore();
+
   const [downloads, setDownloads] = useState<
     DownloadItem[]
   >([]);
+
   const [loading, setLoading] = useState(true);
+
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (!hasHydrated) return;
+
+    // Guests should not make the protected API request.
+    if (!user) {
+      setDownloads([]);
+      setError("");
+      setLoading(false);
+      return;
+    }
+
     const fetchDownloads = async () => {
       try {
         setLoading(true);
@@ -50,8 +66,15 @@ export default function DownloadsPage() {
         const response =
           await api.get("/users/downloads");
 
-        setDownloads(response.data?.data ?? []);
+        setDownloads(
+          response.data?.data ?? [],
+        );
       } catch (error: any) {
+        console.error(
+          "Failed to load downloads:",
+          error,
+        );
+
         setError(
           error?.response?.data?.message ||
             "Unable to load your downloads",
@@ -62,7 +85,74 @@ export default function DownloadsPage() {
     };
 
     fetchDownloads();
-  }, []);
+  }, [user, hasHydrated]);
+
+  // ===================================================
+  // Auth hydration
+  // ===================================================
+
+  if (!hasHydrated) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-background px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto flex min-h-[465px] max-w-7xl items-center justify-center rounded-2xl border border-border bg-card">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-red-500 border-t-transparent" />
+        </div>
+      </main>
+    );
+  }
+
+  // ===================================================
+  // Guest
+  // ===================================================
+
+  if (!user) {
+    return (
+      <main className="min-h-[calc(100vh-4rem)] bg-background px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-8">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-muted">
+                <Download className="h-5 w-5 text-red-500" />
+              </div>
+
+              <div>
+                <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
+                  Downloads
+                </h1>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Videos you have downloaded from Binge
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex min-h-[465px] flex-col items-center justify-center rounded-2xl border border-border bg-card px-4 text-center">
+            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-muted">
+              <Download className="h-9 w-9 text-muted-foreground" />
+            </div>
+
+            <h2 className="text-xl font-bold text-foreground sm:text-2xl">
+              Please login first
+            </h2>
+
+            <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
+              Sign in to view and manage your downloaded videos.
+            </p>
+
+            <Link
+              href="/login"
+              className="mt-6"
+            >
+              <Button className="h-10 rounded-full bg-red-500 px-7 text-sm font-semibold text-white hover:bg-red-600">
+                Login
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-background px-4 py-6 sm:px-6 lg:px-8">
@@ -110,7 +200,9 @@ export default function DownloadsPage() {
 
             <Button
               type="button"
-              onClick={() => window.location.reload()}
+              onClick={() =>
+                window.location.reload()
+              }
               className="mt-6 h-10 rounded-full bg-red-500 px-7 text-sm font-semibold text-white hover:bg-red-600"
             >
               Try Again

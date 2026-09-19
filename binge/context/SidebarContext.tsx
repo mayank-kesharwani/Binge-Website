@@ -16,9 +16,9 @@ type SidebarContextType = {
   closeMobileSidebar: () => void;
 };
 
-const SidebarContext = createContext<SidebarContextType | undefined>(
-  undefined
-);
+const SidebarContext = createContext<
+  SidebarContextType | undefined
+>(undefined);
 
 export function SidebarProvider({
   children,
@@ -30,32 +30,52 @@ export function SidebarProvider({
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const checkScreen = () => {
-      const mobile = window.innerWidth < 768;
+    const mediaQuery = window.matchMedia(
+      "(max-width: 767px)",
+    );
+
+    const handleScreenChange = (
+      event?: MediaQueryListEvent,
+    ) => {
+      const mobile =
+        event?.matches ?? mediaQuery.matches;
 
       setIsMobile(mobile);
 
+      // Always close the mobile drawer
+      // when switching to desktop.
       if (!mobile) {
         setIsMobileOpen(false);
       }
     };
 
-    checkScreen();
+    handleScreenChange();
 
-    window.addEventListener("resize", checkScreen);
+    mediaQuery.addEventListener(
+      "change",
+      handleScreenChange,
+    );
 
-    return () => window.removeEventListener("resize", checkScreen);
+    return () => {
+      mediaQuery.removeEventListener(
+        "change",
+        handleScreenChange,
+      );
+    };
   }, []);
 
   const toggleSidebar = () => {
     if (isMobile) {
-      setIsMobileOpen((prev) => !prev);
-    } else {
-      setIsOpen((prev) => !prev);
+      setIsMobileOpen((previous) => !previous);
+      return;
     }
+
+    setIsOpen((previous) => !previous);
   };
 
   const closeMobileSidebar = () => {
+    if (!isMobileOpen) return;
+
     setIsMobileOpen(false);
   };
 
@@ -79,7 +99,7 @@ export function useSidebar() {
 
   if (!context) {
     throw new Error(
-      "useSidebar must be used within SidebarProvider"
+      "useSidebar must be used within SidebarProvider",
     );
   }
 

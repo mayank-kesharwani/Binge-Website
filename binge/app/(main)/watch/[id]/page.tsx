@@ -32,6 +32,10 @@ export default async function WatchPage({
       }
     : undefined;
 
+  // =====================================================
+  // Video
+  // =====================================================
+
   let response;
 
   try {
@@ -52,6 +56,10 @@ export default async function WatchPage({
     notFound();
   }
 
+  // =====================================================
+  // Suggested / Next Videos
+  // =====================================================
+
   const videosResponse = await getAllVideos();
   const videos = videosResponse.data;
 
@@ -67,6 +75,7 @@ export default async function WatchPage({
 
   let adFree = false;
 
+  
   if (token) {
     try {
       const membershipResponse =
@@ -78,10 +87,7 @@ export default async function WatchPage({
         membershipResponse.data?.data?.adFree ??
         false;
     } catch (error) {
-      /*
-       * If membership information cannot be
-       * loaded, default to showing ads.
-       */
+      
       console.error(
         "Failed to fetch membership ad status:",
         error,
@@ -91,6 +97,10 @@ export default async function WatchPage({
     }
   }
 
+  // =====================================================
+  // UI
+  // =====================================================
+
   return (
     <main className="mx-auto max-w-[1800px] px-4 py-6">
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_380px]">
@@ -99,6 +109,8 @@ export default async function WatchPage({
             video={video}
             nextVideoId={nextVideo?._id}
           />
+
+          {/* Advertisement */}
 
           {!adFree && (
             <div className="my-6 flex min-h-[120px] items-center justify-center rounded-2xl border border-border bg-card">
@@ -126,7 +138,9 @@ export default async function WatchPage({
         </section>
 
         <aside className="h-fit xl:sticky xl:top-24">
-          <SuggestedVideos currentVideoId={video._id} />
+          <SuggestedVideos
+            currentVideoId={video._id}
+          />
         </aside>
       </div>
     </main>

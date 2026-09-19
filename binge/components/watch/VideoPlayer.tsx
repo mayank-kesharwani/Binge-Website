@@ -7,16 +7,15 @@ import {
   stopWatchSession,
 } from "@/services/membership.service";
 import { addToHistory } from "@/services/history.service";
+
+import { useAuthStore } from "@/store/authStore";
+
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+
 import VideoControls from "./VideoControls";
-import {
-  Loader2,
-  RotateCcw,
-  RotateCw,
-  Crown,
-  LockKeyhole,
-} from "lucide-react";
+
+import { Loader2, RotateCcw, RotateCw, Crown, LockKeyhole } from "lucide-react";
 
 type VideoPlayerProps = {
   video: {
@@ -30,40 +29,54 @@ type VideoPlayerProps = {
   nextVideoId?: string;
 };
 
-export default function VideoPlayer({
-  video,
-  nextVideoId,
-}: VideoPlayerProps) {
+export default function VideoPlayer({ video, nextVideoId }: VideoPlayerProps) {
   const router = useRouter();
+
+  const { user, hasHydrated } = useAuthStore();
+
   const playerRef = useRef<HTMLDivElement>(null);
+
   const videoRef = useRef<HTMLVideoElement>(null);
+
   const historyAdded = useRef(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
+
   const [muted, setMuted] = useState(false);
+
   const [currentTime, setCurrentTime] = useState(0);
+
   const [duration, setDuration] = useState(0);
+
   const [showControls, setShowControls] = useState(true);
+
   const hideControlsTimeout = useRef<number | null>(null);
+
   const [isFullscreen, setIsFullscreen] = useState(false);
+
   const [isLoading, setIsLoading] = useState(true);
 
   const [skipFeedback, setSkipFeedback] = useState<
     "forward" | "backward" | null
   >(null);
 
-  const [watchTimeLimitReached, setWatchTimeLimitReached] =
-    useState(false);
+  const [watchTimeLimitReached, setWatchTimeLimitReached] = useState(false);
 
   const watchTimeTimer = useRef<number | null>(null);
+
   const watchSessionActive = useRef(false);
+
   const watchTimeRequestInProgress = useRef(false);
 
   const lastTapTime = useRef(0);
+
   const lastTapX = useRef(0);
 
-  const hasPremiumAccess =
-    !video.isPremium || video.premiumAccess;
+  const hasPremiumAccess = !video.isPremium || video.premiumAccess;
+
+  // =====================================================
+  // Stop Watch Session
+  // =====================================================
 
   const stopWatchSessionSafely = async () => {
     if (!watchSessionActive.current) {
@@ -72,17 +85,31 @@ export default function VideoPlayer({
 
     watchSessionActive.current = false;
 
+    if (!hasHydrated || !user) {
+      return;
+    }
+
     try {
       await stopWatchSession();
     } catch (error) {
-      console.error(
-        "Failed to stop watch session:",
-        error,
-      );
+      console.error("Failed to stop watch session:", error);
     }
   };
 
+  // =====================================================
+  // Start Watch Session
+  // =====================================================
+
   const startWatchSessionSafely = async () => {
+    /*
+     * Guests can watch public videos,
+     * but they don't have a membership
+     * watch-time session.
+     */
+    if (!hasHydrated || !user) {
+      return true;
+    }
+
     if (
       !hasPremiumAccess ||
       watchTimeLimitReached ||
@@ -95,8 +122,7 @@ export default function VideoPlayer({
     watchTimeRequestInProgress.current = true;
 
     try {
-      const response =
-        await startWatchSession();
+      const response = await startWatchSession();
 
       const data = response?.data;
 
@@ -125,10 +151,7 @@ export default function VideoPlayer({
           videoRef.current.pause();
         }
       } else {
-        console.error(
-          "Failed to start watch session:",
-          error,
-        );
+        console.error("Failed to start watch session:", error);
       }
 
       return false;
@@ -137,8 +160,14 @@ export default function VideoPlayer({
     }
   };
 
+  // =====================================================
+  // Watch-Time Heartbeat
+  // =====================================================
+
   const sendWatchTimeHeartbeat = async () => {
     if (
+      !hasHydrated ||
+      !user ||
       !watchSessionActive.current ||
       watchTimeRequestInProgress.current ||
       !videoRef.current ||
@@ -151,8 +180,7 @@ export default function VideoPlayer({
     watchTimeRequestInProgress.current = true;
 
     try {
-      const response =
-        await heartbeatWatchSession();
+      const response = await heartbeatWatchSession();
 
       const data = response?.data;
 
@@ -176,89 +204,83 @@ export default function VideoPlayer({
         }
 
         watchSessionActive.current = false;
-      } else if (
-        error?.response?.status === 400
-      ) {
+      } else if (error?.response?.status === 400) {
         /*
-         * The backend no longer considers this
-         * session active. Stop trying to send
-         * heartbeats until playback starts again.
+         * The backend no longer considers
+         * this session active.
          */
         watchSessionActive.current = false;
       } else {
-        console.error(
-          "Failed to update watch time:",
-          error,
-        );
+        console.error("Failed to update watch time:", error);
       }
     } finally {
       watchTimeRequestInProgress.current = false;
     }
   };
 
+  // =====================================================
+  // Play / Pause
+  // =====================================================
+
   const togglePlay = async () => {
-    if (
-      !videoRef.current ||
-      !hasPremiumAccess ||
-      watchTimeLimitReached
-    ) {
+    if (!videoRef.current || !hasPremiumAccess || watchTimeLimitReached) {
       return;
     }
 
     if (videoRef.current.paused) {
-      const started =
-        await startWatchSessionSafely();
+      const started = await startWatchSessionSafely();
 
       if (!started) {
         return;
       }
 
-      videoRef.current.play().catch(
-        (error) => {
-          watchSessionActive.current = false;
+      videoRef.current.play().catch((error) => {
+        watchSessionActive.current = false;
 
-          if (error?.name !== "AbortError") {
-            console.error(
-              "Video playback failed:",
-              error,
-            );
-          }
-        },
-      );
+        if (error?.name !== "AbortError") {
+          console.error("Video playback failed:", error);
+        }
+      });
     } else {
       videoRef.current.pause();
     }
   };
+
+  // =====================================================
+  // Mute
+  // =====================================================
 
   const toggleMute = () => {
     if (!videoRef.current || !hasPremiumAccess) {
       return;
     }
 
-    videoRef.current.muted =
-      !videoRef.current.muted;
+    videoRef.current.muted = !videoRef.current.muted;
 
     setMuted(videoRef.current.muted);
   };
 
+  // =====================================================
+  // Seek
+  // =====================================================
+
   const handleSeek = (percentage: number) => {
-    if (
-      !videoRef.current ||
-      !hasPremiumAccess ||
-      watchTimeLimitReached
-    ) {
+    if (!videoRef.current || !hasPremiumAccess || watchTimeLimitReached) {
       return;
     }
 
     const seekTime = percentage * duration;
 
     videoRef.current.currentTime = seekTime;
+
     setCurrentTime(seekTime);
   };
 
-  const showSkipFeedback = (
-    direction: "forward" | "backward",
-  ) => {
+  // =====================================================
+  // Skip Feedback
+  // =====================================================
+
+  const showSkipFeedback = (direction: "forward" | "backward") => {
     setSkipFeedback(direction);
 
     setTimeout(() => {
@@ -266,12 +288,12 @@ export default function VideoPlayer({
     }, 700);
   };
 
+  // =====================================================
+  // Skip Forward
+  // =====================================================
+
   const skipForward = () => {
-    if (
-      !videoRef.current ||
-      !hasPremiumAccess ||
-      watchTimeLimitReached
-    ) {
+    if (!videoRef.current || !hasPremiumAccess || watchTimeLimitReached) {
       return;
     }
 
@@ -283,12 +305,12 @@ export default function VideoPlayer({
     showSkipFeedback("forward");
   };
 
+  // =====================================================
+  // Skip Backward
+  // =====================================================
+
   const skipBackward = () => {
-    if (
-      !videoRef.current ||
-      !hasPremiumAccess ||
-      watchTimeLimitReached
-    ) {
+    if (!videoRef.current || !hasPremiumAccess || watchTimeLimitReached) {
       return;
     }
 
@@ -300,85 +322,74 @@ export default function VideoPlayer({
     showSkipFeedback("backward");
   };
 
-  const handleDoubleClick = (
-    e: React.MouseEvent<HTMLVideoElement>,
-  ) => {
-    if (
-      !videoRef.current ||
-      !hasPremiumAccess ||
-      watchTimeLimitReached
-    ) {
+  // =====================================================
+  // Double Click
+  // =====================================================
+
+  const handleDoubleClick = (e: React.MouseEvent<HTMLVideoElement>) => {
+    if (!videoRef.current || !hasPremiumAccess || watchTimeLimitReached) {
       return;
     }
 
-    const rect =
-      videoRef.current.getBoundingClientRect();
+    const rect = videoRef.current.getBoundingClientRect();
 
-    const clickPosition =
-      e.clientX - rect.left;
+    const clickPosition = e.clientX - rect.left;
 
     const width = rect.width;
 
     if (clickPosition < width / 3) {
       skipBackward();
-    } else if (
-      clickPosition >
-      (width * 2) / 3
-    ) {
+    } else if (clickPosition > (width * 2) / 3) {
       skipForward();
     }
   };
 
-  const handleTouchEnd = (
-    e: React.TouchEvent<HTMLVideoElement>,
-  ) => {
-    if (
-      !videoRef.current ||
-      !hasPremiumAccess ||
-      watchTimeLimitReached
-    ) {
+  // =====================================================
+  // Touch
+  // =====================================================
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLVideoElement>) => {
+    if (!videoRef.current || !hasPremiumAccess || watchTimeLimitReached) {
       return;
     }
 
     const now = Date.now();
+
     const touch = e.changedTouches[0];
 
     if (!touch) return;
 
-    const rect =
-      videoRef.current.getBoundingClientRect();
+    const rect = videoRef.current.getBoundingClientRect();
 
-    const tapX =
-      touch.clientX - rect.left;
+    const tapX = touch.clientX - rect.left;
 
-    const timeSinceLastTap =
-      now - lastTapTime.current;
+    const timeSinceLastTap = now - lastTapTime.current;
 
     if (timeSinceLastTap < 300) {
       const width = rect.width;
 
       if (tapX < width / 3) {
         skipBackward();
-      } else if (
-        tapX >
-        (width * 2) / 3
-      ) {
+      } else if (tapX > (width * 2) / 3) {
         skipForward();
       }
 
       lastTapTime.current = 0;
+
       return;
     }
 
     lastTapTime.current = now;
+
     lastTapX.current = tapX;
   };
 
+  // =====================================================
+  // Fullscreen
+  // =====================================================
+
   const toggleFullscreen = async () => {
-    if (
-      !playerRef.current ||
-      !hasPremiumAccess
-    ) {
+    if (!playerRef.current || !hasPremiumAccess) {
       return;
     }
 
@@ -389,27 +400,32 @@ export default function VideoPlayer({
     }
   };
 
+  // =====================================================
+  // Next Video
+  // =====================================================
+
   const handleNext = () => {
     if (!nextVideoId) return;
 
     router.push(`/watch/${nextVideoId}`);
   };
 
+  // =====================================================
+  // Mouse Controls
+  // =====================================================
+
   const handleMouseMove = () => {
     setShowControls(true);
 
     if (hideControlsTimeout.current) {
-      clearTimeout(
-        hideControlsTimeout.current,
-      );
+      clearTimeout(hideControlsTimeout.current);
     }
 
-    hideControlsTimeout.current =
-      window.setTimeout(() => {
-        if (isPlaying) {
-          setShowControls(false);
-        }
-      }, 3000);
+    hideControlsTimeout.current = window.setTimeout(() => {
+      if (isPlaying) {
+        setShowControls(false);
+      }
+    }, 3000);
   };
 
   // =====================================================
@@ -420,11 +436,18 @@ export default function VideoPlayer({
     let mounted = true;
 
     const checkWatchTime = async () => {
-      if (!hasPremiumAccess) return;
+      /*
+       * Don't call membership APIs until
+       * Zustand has hydrated.
+       *
+       * Guests don't have watch-time limits.
+       */
+      if (!hasHydrated || !user || !hasPremiumAccess) {
+        return;
+      }
 
       try {
-        const response =
-          await getWatchTimeUsage();
+        const response = await getWatchTimeUsage();
 
         const data = response?.data;
 
@@ -438,10 +461,7 @@ export default function VideoPlayer({
           }
         }
       } catch (error) {
-        console.error(
-          "Failed to check watch-time usage:",
-          error,
-        );
+        console.error("Failed to check watch-time usage:", error);
       }
     };
 
@@ -450,38 +470,29 @@ export default function VideoPlayer({
     return () => {
       mounted = false;
     };
-  }, [hasPremiumAccess]);
+  }, [hasHydrated, user, hasPremiumAccess]);
 
   // =====================================================
   // Server Watch-Time Heartbeat
   // =====================================================
 
   useEffect(() => {
-    if (
-      !hasPremiumAccess ||
-      watchTimeLimitReached
-    ) {
+    if (!hasHydrated || !user || !hasPremiumAccess || watchTimeLimitReached) {
       return;
     }
 
-    watchTimeTimer.current =
-      window.setInterval(() => {
-        sendWatchTimeHeartbeat();
-      }, 10000);
+    watchTimeTimer.current = window.setInterval(() => {
+      sendWatchTimeHeartbeat();
+    }, 10000);
 
     return () => {
       if (watchTimeTimer.current) {
-        clearInterval(
-          watchTimeTimer.current,
-        );
+        clearInterval(watchTimeTimer.current);
 
         watchTimeTimer.current = null;
       }
     };
-  }, [
-    hasPremiumAccess,
-    watchTimeLimitReached,
-  ]);
+  }, [hasHydrated, user, hasPremiumAccess, watchTimeLimitReached]);
 
   // =====================================================
   // Video Events
@@ -490,29 +501,19 @@ export default function VideoPlayer({
   useEffect(() => {
     const videoElement = videoRef.current;
 
-    if (
-      !videoElement ||
-      !hasPremiumAccess
-    ) {
+    if (!videoElement || !hasPremiumAccess) {
       return;
     }
 
-    const onWaiting = () =>
-      setIsLoading(true);
+    const onWaiting = () => setIsLoading(true);
 
-    const onPlaying = () =>
-      setIsLoading(false);
+    const onPlaying = () => setIsLoading(false);
 
-    const onCanPlay = () =>
-      setIsLoading(false);
+    const onCanPlay = () => setIsLoading(false);
 
-    const onLoaded = () =>
-      setDuration(videoElement.duration);
+    const onLoaded = () => setDuration(videoElement.duration);
 
-    const onTimeUpdate = () =>
-      setCurrentTime(
-        videoElement.currentTime,
-      );
+    const onTimeUpdate = () => setCurrentTime(videoElement.currentTime);
 
     const onPlay = async () => {
       if (watchTimeLimitReached) {
@@ -521,46 +522,44 @@ export default function VideoPlayer({
       }
 
       /*
-       * Playback can also be started by the
-       * browser/video element directly, so make
-       * sure a server session exists.
+       * Logged-in users get a membership
+       * watch session.
+       *
+       * Guests can play without one.
        */
-      if (!watchSessionActive.current) {
-        const started =
-          await startWatchSessionSafely();
+      if (hasHydrated && user) {
+        if (!watchSessionActive.current) {
+          const started = await startWatchSessionSafely();
 
-        if (!started) {
-          videoElement.pause();
-          return;
+          if (!started) {
+            videoElement.pause();
+            return;
+          }
         }
       }
 
       setIsPlaying(true);
       setShowControls(true);
 
-      if (!historyAdded.current) {
+      /*
+       * History is account-specific.
+       * Never call it for guests.
+       */
+      if (hasHydrated && user && !historyAdded.current) {
         historyAdded.current = true;
 
-        addToHistory(video._id).catch(
-          (error) => {
-            console.error(
-              "Failed to add video to history:",
-              error,
-            );
-          },
-        );
+        addToHistory(video._id).catch((error) => {
+          console.error("Failed to add video to history:", error);
+        });
       }
 
       if (hideControlsTimeout.current) {
-        clearTimeout(
-          hideControlsTimeout.current,
-        );
+        clearTimeout(hideControlsTimeout.current);
       }
 
-      hideControlsTimeout.current =
-        window.setTimeout(() => {
-          setShowControls(false);
-        }, 3000);
+      hideControlsTimeout.current = window.setTimeout(() => {
+        setShowControls(false);
+      }, 3000);
     };
 
     const onPause = () => {
@@ -577,153 +576,67 @@ export default function VideoPlayer({
       stopWatchSessionSafely();
     };
 
-    videoElement.addEventListener(
-      "loadedmetadata",
-      onLoaded,
-    );
+    videoElement.addEventListener("loadedmetadata", onLoaded);
 
-    videoElement.addEventListener(
-      "timeupdate",
-      onTimeUpdate,
-    );
+    videoElement.addEventListener("timeupdate", onTimeUpdate);
 
-    videoElement.addEventListener(
-      "play",
-      onPlay,
-    );
+    videoElement.addEventListener("play", onPlay);
 
-    videoElement.addEventListener(
-      "pause",
-      onPause,
-    );
+    videoElement.addEventListener("pause", onPause);
 
-    videoElement.addEventListener(
-      "ended",
-      onEnded,
-    );
+    videoElement.addEventListener("ended", onEnded);
 
-    videoElement.addEventListener(
-      "waiting",
-      onWaiting,
-    );
+    videoElement.addEventListener("waiting", onWaiting);
 
-    videoElement.addEventListener(
-      "playing",
-      onPlaying,
-    );
+    videoElement.addEventListener("playing", onPlaying);
 
-    videoElement.addEventListener(
-      "canplay",
-      onCanPlay,
-    );
+    videoElement.addEventListener("canplay", onCanPlay);
 
-    const handleFullscreenChange =
-      () => {
-        setIsFullscreen(
-          !!document.fullscreenElement,
-        );
-      };
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
 
-    document.addEventListener(
-      "fullscreenchange",
-      handleFullscreenChange,
-    );
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
 
     return () => {
-      videoElement.removeEventListener(
-        "loadedmetadata",
-        onLoaded,
-      );
+      videoElement.removeEventListener("loadedmetadata", onLoaded);
 
-      videoElement.removeEventListener(
-        "timeupdate",
-        onTimeUpdate,
-      );
+      videoElement.removeEventListener("timeupdate", onTimeUpdate);
 
-      videoElement.removeEventListener(
-        "play",
-        onPlay,
-      );
+      videoElement.removeEventListener("play", onPlay);
 
-      videoElement.removeEventListener(
-        "pause",
-        onPause,
-      );
+      videoElement.removeEventListener("pause", onPause);
 
-      videoElement.removeEventListener(
-        "ended",
-        onEnded,
-      );
+      videoElement.removeEventListener("ended", onEnded);
 
-      videoElement.removeEventListener(
-        "waiting",
-        onWaiting,
-      );
+      videoElement.removeEventListener("waiting", onWaiting);
 
-      videoElement.removeEventListener(
-        "playing",
-        onPlaying,
-      );
+      videoElement.removeEventListener("playing", onPlaying);
 
-      videoElement.removeEventListener(
-        "canplay",
-        onCanPlay,
-      );
+      videoElement.removeEventListener("canplay", onCanPlay);
 
-      document.removeEventListener(
-        "fullscreenchange",
-        handleFullscreenChange,
-      );
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
 
       if (hideControlsTimeout.current) {
-        clearTimeout(
-          hideControlsTimeout.current,
-        );
+        clearTimeout(hideControlsTimeout.current);
       }
 
       stopWatchSessionSafely();
     };
-  }, [
-    video._id,
-    hasPremiumAccess,
-    watchTimeLimitReached,
-  ]);
+  }, [video._id, hasPremiumAccess, watchTimeLimitReached, hasHydrated, user]);
 
   // =====================================================
   // History
   // =====================================================
 
-  useEffect(() => {
-    if (
-      !video?._id ||
-      !hasPremiumAccess
-    ) {
-      return;
-    }
-
-    addToHistory(video._id).catch(
-      (error) => {
-        console.error(
-          "Failed to add video to history:",
-          error,
-        );
-      },
-    );
-  }, [
-    video?._id,
-    hasPremiumAccess,
-  ]);
 
   // =====================================================
   // Keyboard Controls
   // =====================================================
 
   useEffect(() => {
-    const handleKeyDown = (
-      e: KeyboardEvent,
-    ) => {
-      const target =
-        e.target as HTMLElement;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
 
       if (
         target.tagName === "INPUT" ||
@@ -733,10 +646,7 @@ export default function VideoPlayer({
         return;
       }
 
-      if (
-        !hasPremiumAccess ||
-        watchTimeLimitReached
-      ) {
+      if (!hasPremiumAccess || watchTimeLimitReached) {
         return;
       }
 
@@ -766,32 +676,24 @@ export default function VideoPlayer({
       }
     };
 
-    window.addEventListener(
-      "keydown",
-      handleKeyDown,
-    );
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener(
-        "keydown",
-        handleKeyDown,
-      );
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [
-    duration,
-    hasPremiumAccess,
-    watchTimeLimitReached,
-  ]);
+  }, [duration, hasPremiumAccess, watchTimeLimitReached]);
 
-  const progress =
-    duration === 0
-      ? 0
-      : (currentTime / duration) * 100;
+  // =====================================================
+  // Progress
+  // =====================================================
+  
+  const progress = duration === 0 ? 0 : (currentTime / duration) * 100;
 
-  if (
-    video.isPremium &&
-    !video.premiumAccess
-  ) {
+  // =====================================================
+  // Premium Access
+  // =====================================================
+
+  if (video.isPremium && !video.premiumAccess) {
     return (
       <div
         ref={playerRef}
@@ -808,24 +710,16 @@ export default function VideoPlayer({
             <Crown className="h-7 w-7" />
           </div>
 
-          <h2 className="text-2xl font-bold text-foreground">
-            Premium Video
-          </h2>
+          <h2 className="text-2xl font-bold text-foreground">Premium Video</h2>
 
           <p className="mt-2 text-sm text-muted-foreground">
-            This video is available to
-            Binge Premium members.
-            Upgrade your membership to
-            start watching.
+            This video is available to Binge Premium members. Upgrade your
+            membership to start watching.
           </p>
 
           <button
             type="button"
-            onClick={() =>
-              router.push(
-                "/settings/membership",
-              )
-            }
+            onClick={() => router.push("/settings/membership")}
             className="mt-6 flex items-center gap-2 rounded-full bg-red-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-600"
           >
             <LockKeyhole className="h-4 w-4" />
@@ -835,6 +729,10 @@ export default function VideoPlayer({
       </div>
     );
   }
+
+  // =====================================================
+  // Player
+  // =====================================================
 
   return (
     <div
@@ -857,15 +755,8 @@ export default function VideoPlayer({
         onDoubleClick={handleDoubleClick}
         onTouchEnd={handleTouchEnd}
       >
-        <source
-          src={
-            video.videoUrl ?? undefined
-          }
-          type="video/mp4"
-        />
-
-        Your browser does not support
-        the video tag.
+        <source src={video.videoUrl ?? undefined} type="video/mp4" />
+        Your browser does not support the video tag.
       </video>
 
       {isLoading && (
@@ -877,22 +768,17 @@ export default function VideoPlayer({
       {skipFeedback && (
         <div
           className={`pointer-events-none absolute top-1/2 z-20 flex -translate-y-1/2 items-center justify-center ${
-            skipFeedback === "forward"
-              ? "right-[20%]"
-              : "left-[20%]"
+            skipFeedback === "forward" ? "right-[20%]" : "left-[20%]"
           }`}
         >
           <div className="flex h-20 w-20 animate-in zoom-in-75 flex-col items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm duration-200">
-            {skipFeedback ===
-            "forward" ? (
+            {skipFeedback === "forward" ? (
               <RotateCw className="h-8 w-8" />
             ) : (
               <RotateCcw className="h-8 w-8" />
             )}
 
-            <span className="text-sm font-semibold">
-              10 seconds
-            </span>
+            <span className="text-sm font-semibold">10 seconds</span>
           </div>
         </div>
       )}
@@ -905,19 +791,13 @@ export default function VideoPlayer({
             </h2>
 
             <p className="mt-2 text-sm text-muted-foreground">
-              You have reached your watch-time
-              limit for your current membership.
-              Upgrade your membership to get
-              more watch time.
+              You have reached your watch-time limit for your current
+              membership. Upgrade your membership to get more watch time.
             </p>
 
             <button
               type="button"
-              onClick={() =>
-                router.push(
-                  "/settings/membership",
-                )
-              }
+              onClick={() => router.push("/settings/membership")}
               className="mt-5 rounded-full bg-red-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-600"
             >
               Upgrade Membership
@@ -927,17 +807,12 @@ export default function VideoPlayer({
       )}
 
       <VideoControls
-        isPlaying={
-          isPlaying && !watchTimeLimitReached
-        }
+        isPlaying={isPlaying && !watchTimeLimitReached}
         muted={muted}
         currentTime={currentTime}
         duration={duration}
         progress={progress}
-        showControls={
-          showControls &&
-          !watchTimeLimitReached
-        }
+        showControls={showControls && !watchTimeLimitReached}
         onPlayPause={togglePlay}
         onMute={toggleMute}
         onSeek={handleSeek}
@@ -945,11 +820,7 @@ export default function VideoPlayer({
         isFullscreen={isFullscreen}
         onSkipForward={skipForward}
         onSkipBackward={skipBackward}
-        onNext={
-          nextVideoId
-            ? handleNext
-            : undefined
-        }
+        onNext={nextVideoId ? handleNext : undefined}
       />
     </div>
   );

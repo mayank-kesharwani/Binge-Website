@@ -23,6 +23,8 @@ import {
   getWatchLaterStatus,
 } from "@/services/watchLater.service";
 
+import { useAuthStore } from "@/store/authStore";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,8 +41,13 @@ export default function VideoActions({
 }: VideoActionsProps) {
   const router = useRouter();
 
+  const { user, hasHydrated } = useAuthStore();
+
   const [likes, setLikes] = useState(video.likes);
-  const [isDownloading, setIsDownloading] = useState(false);
+
+  const [isDownloading, setIsDownloading] =
+    useState(false);
+
   const [isCreatingParty, setIsCreatingParty] =
     useState(false);
 
@@ -53,17 +60,31 @@ export default function VideoActions({
   const [showShareDialog, setShowShareDialog] =
     useState(false);
 
+  // ===================================================
+  // Sync initial saved state
+  // ===================================================
+
   useEffect(() => {
     setIsSaved(Boolean(video.isSaved));
   }, [video.isSaved]);
 
+  // ===================================================
+  // Get Watch Later status
+  // ===================================================
+
   useEffect(() => {
+    if (!hasHydrated || !user) {
+      return;
+    }
+
     const fetchWatchLaterStatus = async () => {
       try {
         const response =
           await getWatchLaterStatus(video._id);
 
-        setIsSaved(Boolean(response?.data?.isSaved));
+        setIsSaved(
+          Boolean(response?.data?.isSaved),
+        );
       } catch (error) {
         console.error(
           "Failed to fetch Watch Later status:",
@@ -73,13 +94,32 @@ export default function VideoActions({
     };
 
     fetchWatchLaterStatus();
-  }, [video._id]);
+  }, [video._id, user, hasHydrated]);
 
-  /* --------------------------------
-     Save
-  -------------------------------- */
+  // ===================================================
+  // Guest Authentication Check
+  // ===================================================
+
+  const requireLogin = () => {
+    if (!hasHydrated) {
+      return false;
+    }
+
+    if (!user) {
+      toast.error("Please login first");
+      return false;
+    }
+
+    return true;
+  };
+
+  // ===================================================
+  // Save / Watch Later
+  // ===================================================
 
   const handleSave = async () => {
+    if (!requireLogin()) return;
+
     if (isSaving) return;
 
     try {
@@ -88,7 +128,9 @@ export default function VideoActions({
       const response =
         await toggleWatchLater(video._id);
 
-      const saved = Boolean(response?.data?.isSaved);
+      const saved = Boolean(
+        response?.data?.isSaved,
+      );
 
       setIsSaved(saved);
 
@@ -112,11 +154,13 @@ export default function VideoActions({
     }
   };
 
-  /* --------------------------------
-     Download
-  -------------------------------- */
+  // ===================================================
+  // Download
+  // ===================================================
 
   const handleDownload = async () => {
+    if (!requireLogin()) return;
+
     if (isDownloading) return;
 
     try {
@@ -126,40 +170,57 @@ export default function VideoActions({
         `/downloads/${video._id}`,
       );
 
-      const downloadData = response.data?.data;
-      const downloadUrl = downloadData?.downloadUrl;
+      const downloadData =
+        response.data?.data;
+
+      const downloadUrl =
+        downloadData?.downloadUrl;
 
       if (!downloadUrl) {
-        throw new Error("Download URL not found");
+        throw new Error(
+          "Download URL not found",
+        );
       }
 
-      const link = document.createElement("a");
+      const link =
+        document.createElement("a");
 
       link.href = downloadUrl;
+
       link.download =
-        downloadData?.fileName || "binge-video.mp4";
+        downloadData?.fileName ||
+        "binge-video.mp4";
+
       link.target = "_blank";
       link.rel = "noopener noreferrer";
 
       document.body.appendChild(link);
+
       link.click();
+
       link.remove();
     } catch (error: any) {
-      const message =
-        error?.response?.data?.message ||
-        "Unable to download this video";
+      console.error(
+        "Failed to download video:",
+        error,
+      );
 
-      alert(message);
+      toast.error(
+        error?.response?.data?.message ||
+          "Unable to download this video",
+      );
     } finally {
       setIsDownloading(false);
     }
   };
 
-  /* --------------------------------
-     Watch Party
-  -------------------------------- */
+  // ===================================================
+  // Watch Party
+  // ===================================================
 
   const handleCreateWatchParty = async () => {
+    if (!requireLogin()) return;
+
     if (isCreatingParty) return;
 
     try {
@@ -169,17 +230,22 @@ export default function VideoActions({
         await createWatchParty(video._id);
 
       const party = response?.data;
+
       const partyCode = party?.partyCode;
 
       if (!partyCode) {
-        throw new Error("Watch Party code not found");
+        throw new Error(
+          "Watch Party code not found",
+        );
       }
 
       toast.success(
         "Watch Party created successfully",
       );
 
-      router.push(`/watch-party/${partyCode}`);
+      router.push(
+        `/watch-party/${partyCode}`,
+      );
     } catch (error: any) {
       console.error(
         "Failed to create watch party:",
@@ -195,13 +261,17 @@ export default function VideoActions({
     }
   };
 
-  /* --------------------------------
-     Share
-  -------------------------------- */
+  // ===================================================
+  // Share
+  // ===================================================
 
   const openShareDialog = () => {
     setShowShareDialog(true);
   };
+
+  // ===================================================
+  // UI
+  // ===================================================
 
   return (
     <>
@@ -220,7 +290,7 @@ export default function VideoActions({
             </span>
           </div>
 
-          {/* Other actions */}
+          {/* Other Actions */}
 
           <div className="flex shrink-0 items-center gap-2">
             {/* Download */}
@@ -228,7 +298,9 @@ export default function VideoActions({
             <button
               type="button"
               onClick={handleDownload}
-              disabled={isDownloading}
+              disabled={
+                isDownloading || !hasHydrated
+              }
               className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-muted px-3 text-sm font-medium transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
             >
               <Download size={18} />
@@ -245,7 +317,9 @@ export default function VideoActions({
             <button
               type="button"
               onClick={handleCreateWatchParty}
-              disabled={isCreatingParty}
+              disabled={
+                isCreatingParty || !hasHydrated
+              }
               className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-muted px-3 text-sm font-medium transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
             >
               <PartyPopper size={18} />
@@ -262,7 +336,9 @@ export default function VideoActions({
             <button
               type="button"
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={
+                isSaving || !hasHydrated
+              }
               className={`flex h-10 shrink-0 items-center gap-2 rounded-full px-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 ${
                 isSaved
                   ? "bg-red-100 text-red-600 hover:bg-red-200"
@@ -272,7 +348,9 @@ export default function VideoActions({
               <Bookmark
                 size={18}
                 className={
-                  isSaved ? "fill-current" : ""
+                  isSaved
+                    ? "fill-current"
+                    : ""
                 }
               />
 

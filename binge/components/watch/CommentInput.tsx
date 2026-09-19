@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
+
 import { addComment } from "@/services/comment.service";
+import { useAuthStore } from "@/store/authStore";
 
 type CommentInputProps = {
   videoId: string;
@@ -12,19 +15,38 @@ export default function CommentInput({
   videoId,
   onCommentAdded,
 }: CommentInputProps) {
+  const { user, hasHydrated } = useAuthStore();
+
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const maxLength = 1000;
 
+  const requireLogin = () => {
+    if (!hasHydrated) {
+      return false;
+    }
+
+    if (!user) {
+      toast.error("Please login first");
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async () => {
+    if (!requireLogin()) return;
+
     const text = comment.trim();
 
     if (!text) return;
 
     if (text.length > maxLength) {
-      setError(`Comment cannot exceed ${maxLength} characters.`);
+      setError(
+        `Comment cannot exceed ${maxLength} characters.`,
+      );
       return;
     }
 
@@ -36,10 +58,12 @@ export default function CommentInput({
 
       setComment("");
 
-      // Tell Comments.tsx to fetch the updated comments
       onCommentAdded();
     } catch (error: any) {
-      console.error("Failed to add comment:", error);
+      console.error(
+        "Failed to add comment:",
+        error,
+      );
 
       const message =
         error?.response?.data?.message ||
@@ -57,12 +81,25 @@ export default function CommentInput({
     setError("");
   };
 
+  const handleInputFocus = () => {
+    if (!hasHydrated) return;
+
+    if (!user) {
+      toast.error("Please login first");
+    }
+  };
+
   return (
     <div className="mt-6">
       <textarea
         rows={3}
         value={comment}
+        onFocus={handleInputFocus}
         onChange={(e) => {
+          if (!hasHydrated || !user) {
+            return;
+          }
+
           setComment(e.target.value);
 
           if (error) {
@@ -70,7 +107,11 @@ export default function CommentInput({
           }
         }}
         maxLength={maxLength}
-        placeholder="Add a comment..."
+        placeholder={
+          user
+            ? "Add a comment..."
+            : "Please login to comment..."
+        }
         disabled={loading}
         className="w-full resize-none rounded-xl border border-border bg-background p-4 text-foreground outline-none transition placeholder:text-muted-foreground focus:border-red-500 focus:ring-2 focus:ring-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
       />
@@ -90,7 +131,7 @@ export default function CommentInput({
 
       {/* Moderation/API error */}
       {error && (
-        <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400">
+        <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
           {error}
         </p>
       )}
@@ -108,10 +149,16 @@ export default function CommentInput({
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={loading || !comment.trim()}
+          disabled={
+            loading ||
+            !comment.trim() ||
+            !hasHydrated
+          }
           className="rounded-full bg-red-600 px-6 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Posting..." : "Comment"}
+          {loading
+            ? "Posting..."
+            : "Comment"}
         </button>
       </div>
     </div>
