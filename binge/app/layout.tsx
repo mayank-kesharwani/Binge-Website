@@ -5,6 +5,7 @@ import ThemeProvider from "@/components/providers/ThemeProvider";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import ThemeSync from "@/components/providers/ThemeSync";
+import NavigationLoader from "@/components/layout/NavigationLoader";
 
 import "./globals.css";
 
@@ -29,6 +30,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} className="h-full" suppressHydrationWarning>
       <body className={outfit.className}>
+        <NavigationLoader />
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
